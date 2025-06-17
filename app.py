@@ -1,20 +1,25 @@
-# app.py
+# app.py (updated)
 import streamlit as st
 from data.fetch_data import fetch_indicator
 from utils.indicators import INDICATORS, COUNTRIES
-from visualizations.plot_utils import line_chart
+from visualizations.plot_utils import multi_country_chart
 
-st.set_page_config("MacroView – Global Economic Dashboard", layout="wide")
-st.title("📊 Global Macro Dashboard")
+st.set_page_config("MacroView – Global Macro Dashboard", layout="wide")
+st.title("🌐 MacroView – Global Macro Dashboard")
 
-country = st.selectbox("🌍 Select Country", list(COUNTRIES.keys()))
+selected_countries = st.multiselect("🌍 Select Countries", list(COUNTRIES.keys()), default=["United States", "India"])
 indicator = st.selectbox("📈 Select Economic Indicator", list(INDICATORS.keys()))
 
-with st.spinner("Fetching data from World Bank..."):
+dfs = []
+for country in selected_countries:
     df = fetch_indicator(COUNTRIES[country], INDICATORS[indicator])
+    df["Country"] = country
+    dfs.append(df)
 
-if df.empty:
-    st.warning("No data found for this combination.")
+if not dfs or any(df.empty for df in dfs):
+    st.warning("One or more countries have missing data for this indicator.")
 else:
-    fig = line_chart(df, f"{indicator} for {country}")
+    from pandas import concat
+    combined_df = concat(dfs)
+    fig = multi_country_chart(combined_df, indicator)
     st.plotly_chart(fig, use_container_width=True)
