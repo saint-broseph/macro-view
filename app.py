@@ -32,7 +32,7 @@ with tab1:
     selected_countries = st.sidebar.multiselect(
         "🌍 Select Countries",
         options=list(all_countries.keys()),
-        default=["United States", "India", "China"]
+        default=[]
     )
 
     selected_indicator = st.sidebar.selectbox(
@@ -40,30 +40,36 @@ with tab1:
         options=list(INDICATORS.keys())
     )
 
-    dfs = []
-    for country in selected_countries:
-        df = fetch_indicator(all_countries[country], INDICATORS[selected_indicator])
-        if not df.empty:
-            df["Country"] = country
-            dfs.append(df)
-
-    if not dfs or any(df.empty for df in dfs):
-        st.warning("⚠️ One or more selected countries have no available data for this indicator.")
+    if not selected_countries:
+        st.warning("⚠️ Please select at least one country.")
     else:
-        combined_df = pd.concat(dfs)
-        years = combined_df["Year"].dropna().unique()
-        min_year, max_year = int(min(years)), int(max(years))
+        dfs = []
+        for country in selected_countries:
+            country_code = all_countries.get(country)
+            indicator_code = INDICATORS.get(selected_indicator)
+            if country_code and indicator_code:
+                df = fetch_indicator(country_code, indicator_code)
+                if not df.empty:
+                    df["Country"] = country
+                    dfs.append(df)
 
-        start_year = st.sidebar.slider(
-            "📅 Start Year",
-            min_value=min_year,
-            max_value=max_year,
-            value=min_year
-        )
+        if not dfs:
+            st.warning("⚠️ No available data for the selected indicator and countries.")
+        else:
+            combined_df = pd.concat(dfs)
+            years = combined_df["Year"].dropna().unique()
+            min_year, max_year = int(min(years)), int(max(years))
 
-        filtered_df = combined_df[combined_df["Year"] >= start_year]
-        fig = multi_country_chart(filtered_df, selected_indicator)
-        st.plotly_chart(fig, use_container_width=True)
+            start_year = st.sidebar.slider(
+                "📅 Start Year",
+                min_value=min_year,
+                max_value=max_year,
+                value=min_year
+            )
+
+            filtered_df = combined_df[combined_df["Year"] >= start_year]
+            fig = multi_country_chart(filtered_df, selected_indicator)
+            st.plotly_chart(fig, use_container_width=True)
 
 # ===============================
 # ⚡ TAB 2 — Real-Time Dashboard
@@ -103,21 +109,19 @@ with tab2:
 # ===============================
 with tab3:
     st.subheader("📄 Country Snapshot Dashboard")
-    selected_country = st.selectbox("Select a country", options=list(all_countries.keys()), index=list(all_countries.keys()).index("India"))
+    selected_country = st.selectbox("Select a country", options=list(all_countries.keys()))
 
     col1, col2 = st.columns(2)
     for idx, indicator in enumerate(SNAPSHOT_INDICATORS):
+        country_code = all_countries.get(selected_country)
         indicator_code = INDICATORS.get(indicator)
-        if not indicator_code:
-            st.warning(f"⚠️ Indicator '{indicator}' not found in INDICATORS dictionary.")
-            continue
-
-        df = fetch_indicator(all_countries[selected_country], indicator_code)
-        if not df.empty:
-            latest_year = df["Year"].max()
-            latest_value = df[df["Year"] == latest_year]["Value"].values[0]
-            with (col1 if idx % 2 == 0 else col2):
-                st.metric(label=indicator, value=f"{latest_value:,.2f}", delta=f"Year: {latest_year}")
+        if country_code and indicator_code:
+            df = fetch_indicator(country_code, indicator_code)
+            if not df.empty:
+                latest_year = df["Year"].max()
+                latest_value = df[df["Year"] == latest_year]["Value"].values[0]
+                with (col1 if idx % 2 == 0 else col2):
+                    st.metric(label=indicator, value=f"{latest_value:,.2f}", delta=f"Year: {latest_year}")
 
 # ===============================
 # 🆚 TAB 4 — Country Comparison
@@ -126,27 +130,26 @@ with tab4:
     st.subheader("🆚 Country Comparison Dashboard")
     col1, col2 = st.columns(2)
     with col1:
-        country1 = st.selectbox("Country 1", list(all_countries.keys()), index=list(all_countries.keys()).index("Germany"))
+        country1 = st.selectbox("Country 1", list(all_countries.keys()))
     with col2:
-        country2 = st.selectbox("Country 2", list(all_countries.keys()), index=list(all_countries.keys()).index("India"))
+        country2 = st.selectbox("Country 2", list(all_countries.keys()))
 
     col1, col2 = st.columns(2)
     for idx, indicator in enumerate(SNAPSHOT_INDICATORS):
+        code1 = all_countries.get(country1)
+        code2 = all_countries.get(country2)
         indicator_code = INDICATORS.get(indicator)
-        if not indicator_code:
-            st.warning(f"⚠️ Indicator '{indicator}' not found in INDICATORS dictionary.")
-            continue
+        if code1 and code2 and indicator_code:
+            df1 = fetch_indicator(code1, indicator_code)
+            df2 = fetch_indicator(code2, indicator_code)
 
-        df1 = fetch_indicator(all_countries.get(country1), indicator_code)
-        df2 = fetch_indicator(all_countries.get(country2), indicator_code)
+            if not df1.empty and not df2.empty:
+                latest1 = df1[df1["Year"] == df1["Year"].max()]["Value"].values[0]
+                latest2 = df2[df2["Year"] == df2["Year"].max()]["Value"].values[0]
 
-        if not df1.empty and not df2.empty:
-            latest1 = df1[df1["Year"] == df1["Year"].max()]["Value"].values[0]
-            latest2 = df2[df2["Year"] == df2["Year"].max()]["Value"].values[0]
-
-            with (col1 if idx % 2 == 0 else col2):
-                st.metric(
-                    label=indicator,
-                    value=f"{country1}: {latest1:,.2f}",
-                    delta=f"{country2}: {latest2:,.2f}"
-                )
+                with (col1 if idx % 2 == 0 else col2):
+                    st.metric(
+                        label=indicator,
+                        value=f"{country1}: {latest1:,.2f}",
+                        delta=f"{country2}: {latest2:,.2f}"
+                    )
