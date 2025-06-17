@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from data.fetch_data import fetch_indicator
 from data.realtime_data import fetch_realtime_etf_data, ETF_SYMBOLS
 from utils.indicators import INDICATORS, COUNTRIES
-from utils.snapshot_indicators import SNAPSHOT_INDICATORS
+from utils.snapshots_indicators import SNAPSHOT_INDICATORS
 from visualizations.plot_utils import multi_country_chart
 
 # Page config
