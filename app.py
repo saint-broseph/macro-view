@@ -1,18 +1,21 @@
 import streamlit as st
 import pandas as pd
+from data.fetch_data import fetch_indicator
+from data.countries import get_all_countries
+from utils.indicators import INDICATORS
+from visualizations.plot_utils import multi_country_chart
+from data.realtime_data import fetch_realtime_etf_data, ETF_SYMBOLS
+from utils.snapshots_indicators import SNAPSHOT_INDICATORS
 import plotly.express as px
 
-from data.fetch_data import fetch_indicator
-from data.realtime_data import fetch_realtime_etf_data, ETF_SYMBOLS
-from utils.indicators import INDICATORS, COUNTRIES
-from utils.snapshots_indicators import SNAPSHOT_INDICATORS
-from visualizations.plot_utils import multi_country_chart
-
-# Page Configuration
+# Page config
 st.set_page_config(page_title="🌐 MacroView", layout="wide")
 st.title("🌐 MacroView – Global Macro Dashboard")
 
-# Tabs
+# Load all available countries dynamically
+all_countries = get_all_countries()
+
+# --- Tabs ---
 tab1, tab2, tab3, tab4 = st.tabs([
     "🌍 Macro Dashboard",
     "⚡ Real-Time Dashboard",
@@ -20,15 +23,15 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "🆚 Country Comparison"
 ])
 
-# ========================================
+# ===============================
 # 🌍 TAB 1 — Macro Dashboard
-# ========================================
+# ===============================
 with tab1:
     st.sidebar.header("🛠 Configuration")
 
     selected_countries = st.sidebar.multiselect(
         "🌍 Select Countries",
-        options=list(COUNTRIES.keys()),
+        options=list(all_countries.keys()),
         default=["United States", "India", "China"]
     )
 
@@ -39,7 +42,7 @@ with tab1:
 
     dfs = []
     for country in selected_countries:
-        df = fetch_indicator(COUNTRIES[country], INDICATORS[selected_indicator])
+        df = fetch_indicator(all_countries[country], INDICATORS[selected_indicator])
         if not df.empty:
             df["Country"] = country
             dfs.append(df)
@@ -62,12 +65,11 @@ with tab1:
         fig = multi_country_chart(filtered_df, selected_indicator)
         st.plotly_chart(fig, use_container_width=True)
 
-# ========================================
+# ===============================
 # ⚡ TAB 2 — Real-Time Dashboard
-# ========================================
+# ===============================
 with tab2:
     st.subheader("⚡ Real-Time Economic Indicator Proxies (via ETFs)")
-
     selected_etfs = st.multiselect(
         "📊 Select Indicators",
         options=list(ETF_SYMBOLS.keys()),
@@ -96,65 +98,45 @@ with tab2:
         fig.update_layout(template="plotly_white", xaxis_title="Date", yaxis_title="ETF Price")
         st.plotly_chart(fig, use_container_width=True)
 
-# ========================================
+# ===============================
 # 📄 TAB 3 — Country Snapshot
-# ========================================
+# ===============================
 with tab3:
-    st.subheader("📄 Country Snapshot")
+    st.subheader("📄 Country Snapshot Dashboard")
+    selected_country = st.selectbox("Select a country", options=list(all_countries.keys()), index=list(all_countries.keys()).index("India"))
 
-    selected_country = st.selectbox("🌐 Select Country", list(COUNTRIES.keys()))
-    snapshot_dfs = []
-
-    for indicator in SNAPSHOT_INDICATORS:
-        df = fetch_indicator(COUNTRIES[selected_country], SNAPSHOT_INDICATORS[indicator])
+    col1, col2 = st.columns(2)
+    for idx, indicator in enumerate(SNAPSHOT_INDICATORS):
+        df = fetch_indicator(all_countries[selected_country], INDICATORS[indicator])
         if not df.empty:
             latest_year = df["Year"].max()
             latest_value = df[df["Year"] == latest_year]["Value"].values[0]
-            snapshot_dfs.append({
-                "Indicator": indicator,
-                "Year": latest_year,
-                "Value": latest_value
-            })
+            with (col1 if idx % 2 == 0 else col2):
+                st.metric(label=indicator, value=f"{latest_value:,.2f}", delta=f"Year: {latest_year}")
 
-    if snapshot_dfs:
-        snapshot_df = pd.DataFrame(snapshot_dfs)
-        st.dataframe(snapshot_df, use_container_width=True)
-    else:
-        st.warning("No snapshot data available for selected country.")
-
-# ========================================
+# ===============================
 # 🆚 TAB 4 — Country Comparison
-# ========================================
+# ===============================
 with tab4:
     st.subheader("🆚 Country Comparison Dashboard")
-
     col1, col2 = st.columns(2)
     with col1:
-        country1 = st.selectbox("🇦🇱 Country 1", list(COUNTRIES.keys()), index=0)
+        country1 = st.selectbox("Country 1", list(all_countries.keys()), index=list(all_countries.keys()).index("Germany"))
     with col2:
-        country2 = st.selectbox("🇧🇷 Country 2", list(COUNTRIES.keys()), index=1)
+        country2 = st.selectbox("Country 2", list(all_countries.keys()), index=list(all_countries.keys()).index("India"))
 
-    selected_metrics = st.multiselect(
-        "📊 Select Indicators to Compare",
-        options=list(SNAPSHOT_INDICATORS.keys()),
-        default=["GDP (Current US$)", "Inflation Rate (CPI)", "Unemployment Rate"]
-    )
+    col1, col2 = st.columns(2)
+    for idx, indicator in enumerate(SNAPSHOT_INDICATORS):
+        df1 = fetch_indicator(all_countries[country1], INDICATORS[indicator])
+        df2 = fetch_indicator(all_countries[country2], INDICATORS[indicator])
 
-    for indicator in selected_metrics:
-        col1, col2 = st.columns(2)
+        if not df1.empty and not df2.empty:
+            latest1 = df1[df1["Year"] == df1["Year"].max()]["Value"].values[0]
+            latest2 = df2[df2["Year"] == df2["Year"].max()]["Value"].values[0]
 
-        with col1:
-            df1 = fetch_indicator(COUNTRIES[country1], SNAPSHOT_INDICATORS[indicator])
-            if not df1.empty:
-                st.plotly_chart(
-                    px.line(df1, x="Year", y="Value", title=f"{country1} – {indicator}", markers=True),
-                    use_container_width=True
-                )
-
-        with col2:
-            df2 = fetch_indicator(COUNTRIES[country2], SNAPSHOT_INDICATORS[indicator])
-            if not df2.empty:
-                st.plotly_chart(
-                    px.line(df2, x="Year", y="Value", title=f"{country2} – {indicator}", markers=True),
-                    use_container_width=True
+            with (col1 if idx % 2 == 0 else col2):
+                st.metric(
+                    label=indicator,
+                    value=f"{country1}: {latest1:,.2f}",
+                    delta=f"{country2}: {latest2:,.2f}"
                 )
