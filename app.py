@@ -20,7 +20,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "🌍 Macro Dashboard",
     "⚡ Real-Time Dashboard",
     "📄 Country Snapshot",
-    "🆚 Country Comparison"
+    "🌚 Country Comparison"
 ])
 
 # ===============================
@@ -62,9 +62,9 @@ with tab1:
 
             start_year = st.sidebar.slider(
                 "📅 Start Year",
-                min_value=min_year,
+                min_value=2004,
                 max_value=max_year,
-                value=min_year
+                value=2004
             )
 
             filtered_df = combined_df[combined_df["Year"] >= start_year]
@@ -124,10 +124,10 @@ with tab3:
                     st.metric(label=indicator, value=f"{latest_value:,.2f}", delta=f"Year: {latest_year}")
 
 # ===============================
-# 🆚 TAB 4 — Country Comparison
+# 🌚 TAB 4 — Country Comparison
 # ===============================
 with tab4:
-    st.subheader("🆚 Country Comparison Dashboard")
+    st.subheader("🌚 Country Comparison Dashboard")
     col1, col2 = st.columns(2)
     with col1:
         country1 = st.selectbox("Country 1", list(all_countries.keys()))
