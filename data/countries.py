@@ -1,12 +1,14 @@
+# data/countries.py
 import requests
-import pandas as pd
 
-@st.cache_data(ttl=86400)
 def get_all_countries():
-    url = "http://api.worldbank.org/v2/country?format=json&per_page=500"
-    response = requests.get(url)
-    if response.status_code != 200:
-        return {}
-    
+    response = requests.get("https://api.worldbank.org/v2/country?format=json&per_page=300")
     data = response.json()[1]
-    return {item["name"]: item["id"] for item in data if item["region"]["value"] != "Aggregates"}
+
+    countries = {}
+    for entry in data:
+        code = entry["id"]
+        name = entry["name"]
+        countries[name] = code
+
+    return countries
