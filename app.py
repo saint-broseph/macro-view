@@ -7,6 +7,11 @@ from visualizations.plot_utils import multi_country_chart
 from data.realtime_data import fetch_realtime_etf_data, ETF_SYMBOLS
 from utils.snapshots_indicators import SNAPSHOT_INDICATORS
 import plotly.express as px
+from data.countries import get_all_countries as raw_get_all_countries
+
+@st.cache_data(ttl=86400)
+def get_all_countries():
+    return raw_get_all_countries()
 
 # Page config
 st.set_page_config(page_title="🌐 MacroView", layout="wide")
