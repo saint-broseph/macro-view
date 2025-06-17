@@ -5,7 +5,7 @@ from data.countries import get_all_countries
 from utils.indicators import INDICATORS
 from visualizations.plot_utils import multi_country_chart
 from data.realtime_data import fetch_realtime_etf_data, ETF_SYMBOLS
-from utils.snapshot_indicators import SNAPSHOT_INDICATORS
+from utils.snapshots_indicators import SNAPSHOT_INDICATORS
 import plotly.express as px
 
 # Page config
