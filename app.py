@@ -5,7 +5,7 @@ from data.countries import get_all_countries
 from utils.indicators import INDICATORS
 from visualizations.plot_utils import multi_country_chart
 from data.realtime_data import fetch_realtime_etf_data, ETF_SYMBOLS
-from utils.snapshots_indicators import SNAPSHOT_INDICATORS
+from utils.snapshot_indicators import SNAPSHOT_INDICATORS
 import plotly.express as px
 
 # Page config
@@ -13,15 +13,14 @@ st.set_page_config(page_title="🌐 MacroView", layout="wide")
 st.title("🌐 MacroView – Global Macro Dashboard")
 
 # Load all available countries dynamically
-raw_countries = get_all_countries()
-all_countries = {k.strip(): v for k, v in raw_countries.items()}
+all_countries = get_all_countries()
 
 # --- Tabs ---
 tab1, tab2, tab3, tab4 = st.tabs([
     "🌍 Macro Dashboard",
     "⚡ Real-Time Dashboard",
     "📄 Country Snapshot",
-    "🅺 Country Comparison"
+    "🆚 Country Comparison"
 ])
 
 # ===============================
@@ -43,12 +42,10 @@ with tab1:
 
     dfs = []
     for country in selected_countries:
-        country_code = all_countries.get(country)
-        if country_code:
-            df = fetch_indicator(country_code, INDICATORS[selected_indicator])
-            if not df.empty:
-                df["Country"] = country
-                dfs.append(df)
+        df = fetch_indicator(all_countries[country], INDICATORS[selected_indicator])
+        if not df.empty:
+            df["Country"] = country
+            dfs.append(df)
 
     if not dfs or any(df.empty for df in dfs):
         st.warning("⚠️ One or more selected countries have no available data for this indicator.")
@@ -110,11 +107,12 @@ with tab3:
 
     col1, col2 = st.columns(2)
     for idx, indicator in enumerate(SNAPSHOT_INDICATORS):
-        country_code = all_countries.get(selected_country)
-        if not country_code:
-            st.error(f"❌ Could not find country code for: {selected_country}")
+        indicator_code = INDICATORS.get(indicator)
+        if not indicator_code:
+            st.warning(f"⚠️ Indicator '{indicator}' not found in INDICATORS dictionary.")
             continue
-        df = fetch_indicator(country_code, INDICATORS[indicator])
+
+        df = fetch_indicator(all_countries[selected_country], indicator_code)
         if not df.empty:
             latest_year = df["Year"].max()
             latest_value = df[df["Year"] == latest_year]["Value"].values[0]
@@ -122,10 +120,10 @@ with tab3:
                 st.metric(label=indicator, value=f"{latest_value:,.2f}", delta=f"Year: {latest_year}")
 
 # ===============================
-# 🅺 TAB 4 — Country Comparison
+# 🆚 TAB 4 — Country Comparison
 # ===============================
 with tab4:
-    st.subheader("🅺 Country Comparison Dashboard")
+    st.subheader("🆚 Country Comparison Dashboard")
     col1, col2 = st.columns(2)
     with col1:
         country1 = st.selectbox("Country 1", list(all_countries.keys()), index=list(all_countries.keys()).index("Germany"))
@@ -134,14 +132,13 @@ with tab4:
 
     col1, col2 = st.columns(2)
     for idx, indicator in enumerate(SNAPSHOT_INDICATORS):
-        code1 = all_countries.get(country1)
-        code2 = all_countries.get(country2)
-        if not code1 or not code2:
-            st.error("Could not find codes for one or both selected countries.")
+        indicator_code = INDICATORS.get(indicator)
+        if not indicator_code:
+            st.warning(f"⚠️ Indicator '{indicator}' not found in INDICATORS dictionary.")
             continue
 
-        df1 = fetch_indicator(code1, INDICATORS[indicator])
-        df2 = fetch_indicator(code2, INDICATORS[indicator])
+        df1 = fetch_indicator(all_countries.get(country1), indicator_code)
+        df2 = fetch_indicator(all_countries.get(country2), indicator_code)
 
         if not df1.empty and not df2.empty:
             latest1 = df1[df1["Year"] == df1["Year"].max()]["Value"].values[0]
