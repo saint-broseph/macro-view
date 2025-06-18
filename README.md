@@ -9,5 +9,5 @@ Visualize key economic indicators like GDP growth, inflation, unemployment, and 
 - 📡 Real-time data from World Bank API
 - 🧠 Built with Python, Streamlit, Plotly
 
-👉 [Open the Live App](https://macroview-yourusername.streamlit.app/)
+👉 [Open the Live App]([(https://macro-view.streamlit.app/)])
 
